@@ -1,25 +1,23 @@
-version: '3.8'
-
 services:
   backend:
-    build: ./backend
+    build: ../backend
     ports:
       - "3000:3000"
     env_file:
-      - .env
+      - ../.env
     depends_on:
       db:
         condition: service_healthy
     restart: on-failure
 
   frontend:
-    build: ./frontend
+    build: ../frontend
     ports:
       - "8081:8081"
       - "19000:19000"
       - "19001:19001"
     env_file:
-      - .env
+      - ../.env
     environment:
       - REACT_NATIVE_PACKAGER_HOSTNAME=${MY_IP}
     depends_on:
@@ -35,7 +33,7 @@ services:
       - "3306:3306"
     volumes:
       - db_data:/var/lib/mysql
-      - ./backend/database.sql:/docker-entrypoint-initdb.d/database.sql
+      - ../db/database.sql:/docker-entrypoint-initdb.d/database.sql
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
       interval: 10s
