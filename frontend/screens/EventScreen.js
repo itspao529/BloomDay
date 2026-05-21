@@ -1,6 +1,6 @@
 import {
   View, Text, StyleSheet, TouchableOpacity,
-  FlatList, TextInput, Modal, useEffect
+  FlatList, TextInput, Modal,
 } from "react-native";
 import { useState, useEffect } from "react";
 import { Ionicons } from "@expo/vector-icons";
