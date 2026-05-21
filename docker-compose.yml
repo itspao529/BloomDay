@@ -13,7 +13,7 @@ services:
     restart: on-failure
 
   frontend:
-    build: ./Frontend/frontend-mobile
+    build: ./frontend
     ports:
       - "8081:8081"
       - "19000:19000"
