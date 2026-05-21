@@ -1,7 +1,6 @@
 import { View, Text, StyleSheet, FlatList, TouchableOpacity } from "react-native";
 import { useState, useEffect } from "react";
 import { Ionicons } from "@expo/vector-icons";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import API from "../services/api";
 
 export default function NotificationScreen() {
@@ -11,14 +10,9 @@ export default function NotificationScreen() {
     cargarNotificaciones();
   }, []);
 
-  const getToken = async () => await AsyncStorage.getItem("token");
-
   const cargarNotificaciones = async () => {
     try {
-      const token = await getToken();
-      const res = await API.get("/notificaciones", {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const res = await API.get("/notificaciones");
       setNotificaciones(res.data);
     } catch (error) {
       console.error("Error cargando notificaciones:", error);
@@ -27,10 +21,7 @@ export default function NotificationScreen() {
 
   const marcarLeida = async (id) => {
     try {
-      const token = await getToken();
-      await API.put(`/notificaciones/${id}/leer`, {}, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await API.put(`/notificaciones/${id}/leer`, {});
       cargarNotificaciones();
     } catch (error) {
       console.error("Error marcando notificación:", error);
