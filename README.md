@@ -265,6 +265,31 @@ Todo contenido en Docker Compose 🐳
 
 ---
 
+## 🎥 Video de Evidencia
+
+El siguiente video muestra el funcionamiento completo de la aplicación, incluyendo la instalación, navegación entre pantallas, consumo de la API y ejecución de los contenedores Docker.
+
+🔗 [Ver video de evidencia]()
+
+> El video tiene una duración de 3 a 7 minutos y cubre:
+> - Instalación y ejecución del sistema
+> - Navegación entre pantallas móviles
+> - Interacción con las funciones principales
+> - Respuestas de la API y datos en base de datos
+> - Ejecución de los contenedores Docker
+
+---
+
+## 📊 Presentación del Proyecto
+
+La presentación técnica del proyecto (pitch) está disponible en el siguiente enlace:
+
+🔗 [Ver presentación](https://www.canva.com/PENDIENTE)
+
+> Incluye: resumen del problema, solución propuesta, arquitectura del sistema, tecnologías utilizadas, retos técnicos y lecciones aprendidas.
+
+---
+
 ## 👨‍💻 Autores
 
 Proyecto desarrollado para la materia **Diseño y Programación de Software Multiplataforma DPS441 G02T**  
