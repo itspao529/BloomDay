@@ -1,193 +1,173 @@
 import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  ScrollView,
+  View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ScrollView,
 } from "react-native";
-
 import { useState } from "react";
-
-import { Ionicons } from "@expo/vector-icons";
+import { register } from "../services/authService";
 
 export default function RegisterScreen({ navigation }) {
-
-  const [name, setName] = useState("");
+  const [nombre, setNombre] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmar, setConfirmar] = useState("");
+  const [rol, setRol] = useState("usuario");
+  const [loading, setLoading] = useState(false);
 
-  const handleRegister = () => {
-
-    navigation.navigate("Login");
-
+  const handleRegister = async () => {
+    if (!nombre || !email || !password || !confirmar) {
+      Alert.alert("Error", "Completa todos los campos");
+      return;
+    }
+    if (password !== confirmar) {
+      Alert.alert("Error", "Las contraseñas no coinciden");
+      return;
+    }
+    try {
+      setLoading(true);
+      await register(nombre, email, password, rol);
+      Alert.alert("Éxito", "Cuenta creada exitosamente");
+      navigation.navigate("Login");
+    } catch (error) {
+      Alert.alert("Error", "No se pudo crear la cuenta");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
+    <ScrollView contentContainerStyle={styles.container}>
+      <Text style={styles.logo}>BloomDay</Text>
+      <Text style={styles.flower}>🌸🌸</Text>
+      <Text style={styles.titulo}>Registro de Cuenta</Text>
 
-    <ScrollView
-      contentContainerStyle={styles.container}
-    >
+      <View style={styles.form}>
+        <Text style={styles.label}>Nombre</Text>
+        <TextInput style={styles.input} value={nombre} onChangeText={setNombre} placeholderTextColor="#aaa" />
 
-      <View style={styles.card}>
+        <Text style={styles.label}>Correo Electronico</Text>
+        <TextInput style={styles.input} value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" placeholderTextColor="#aaa" />
 
-        <Text style={styles.title}>
-          Crear Cuenta
-        </Text>
-
-        <Text style={styles.subtitle}>
-          Regístrate para comenzar
-        </Text>
-
-        <View style={styles.inputContainer}>
-
-          <Ionicons
-            name="person-outline"
-            size={22}
-            color="#666"
-          />
-
-          <TextInput
-            placeholder="Nombre completo"
-            placeholderTextColor="#888"
-            style={styles.input}
-            value={name}
-            onChangeText={setName}
-          />
-
+        <Text style={styles.label}>Tipo de usuario</Text>
+        <View style={styles.rolContainer}>
+          <TouchableOpacity
+            style={[styles.rolButton, rol === "usuario" && styles.rolActive]}
+            onPress={() => setRol("usuario")}
+          >
+            <Text style={[styles.rolText, rol === "usuario" && styles.rolTextActive]}>Padre</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.rolButton, rol === "admin" && styles.rolActive]}
+            onPress={() => setRol("admin")}
+          >
+            <Text style={[styles.rolText, rol === "admin" && styles.rolTextActive]}>Docente</Text>
+          </TouchableOpacity>
         </View>
 
-        <View style={styles.inputContainer}>
+        <Text style={styles.label}>Contraseña</Text>
+        <TextInput style={styles.input} value={password} onChangeText={setPassword} secureTextEntry placeholderTextColor="#aaa" />
 
-          <Ionicons
-            name="mail-outline"
-            size={22}
-            color="#666"
-          />
+        <Text style={styles.label}>Confirmar Contraseña</Text>
+        <TextInput style={styles.input} value={confirmar} onChangeText={setConfirmar} secureTextEntry placeholderTextColor="#aaa" />
 
-          <TextInput
-            placeholder="Correo electrónico"
-            placeholderTextColor="#888"
-            style={styles.input}
-            value={email}
-            onChangeText={setEmail}
-          />
-
-        </View>
-
-        <View style={styles.inputContainer}>
-
-          <Ionicons
-            name="lock-closed-outline"
-            size={22}
-            color="#666"
-          />
-
-          <TextInput
-            placeholder="Contraseña"
-            placeholderTextColor="#888"
-            secureTextEntry
-            style={styles.input}
-            value={password}
-            onChangeText={setPassword}
-          />
-
-        </View>
-
-        <TouchableOpacity
-          style={styles.button}
-          onPress={handleRegister}
-        >
-
-          <Text style={styles.buttonText}>
-            Registrarse
-          </Text>
-
+        <TouchableOpacity style={styles.button} onPress={handleRegister} disabled={loading}>
+          <Text style={styles.buttonText}>{loading ? "Cargando..." : "Registrarse"}</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity
-          onPress={() => navigation.navigate("Login")}
-        >
-
+        <TouchableOpacity onPress={() => navigation.navigate("Login")}>
           <Text style={styles.loginText}>
-            ¿Ya tienes cuenta? Inicia sesión
+            Ya tienes cuenta? <Text style={styles.loginLink}>Iniciar Sesión</Text>
           </Text>
-
         </TouchableOpacity>
-
       </View>
-
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-
   container: {
     flexGrow: 1,
-    backgroundColor: "#0F172A",
+    backgroundColor: "#F6EFD6",
+    alignItems: "center",
     justifyContent: "center",
-    padding: 20,
+    padding: 30,
   },
-
-  card: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 20,
-    padding: 25,
-    elevation: 5,
-  },
-
-  title: {
-    fontSize: 32,
+  logo: {
+    fontSize: 42,
     fontWeight: "bold",
-    textAlign: "center",
-    color: "#0F172A",
+    color: "#C0392B",
+    fontStyle: "italic",
+    marginBottom: 5,
   },
-
-  subtitle: {
-    textAlign: "center",
-    color: "#666",
-    marginBottom: 30,
-    marginTop: 5,
+  flower: {
+    fontSize: 36,
+    marginBottom: 10,
   },
-
-  inputContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#DDD",
-    borderRadius: 12,
-    paddingHorizontal: 10,
-    marginBottom: 15,
-    height: 55,
+  titulo: {
+    fontSize: 20,
+    color: "#333",
+    marginBottom: 20,
   },
-
-  input: {
-    flex: 1,
-    marginLeft: 10,
-    color: "#000",
+  form: {
+    width: "100%",
   },
-
-  button: {
-    backgroundColor: "#2563EB",
-    height: 55,
-    borderRadius: 12,
-    justifyContent: "center",
-    alignItems: "center",
+  label: {
+    fontSize: 16,
+    color: "#333",
+    marginBottom: 6,
     marginTop: 10,
   },
-
+  input: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    borderWidth: 1,
+    borderColor: "#ddd",
+    marginBottom: 5,
+  },
+  rolContainer: {
+    flexDirection: "row",
+    gap: 10,
+    marginBottom: 5,
+  },
+  rolButton: {
+    flex: 1,
+    padding: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#7DBE7A",
+    alignItems: "center",
+  },
+  rolActive: {
+    backgroundColor: "#7DBE7A",
+  },
+  rolText: {
+    color: "#7DBE7A",
+    fontWeight: "bold",
+  },
+  rolTextActive: {
+    color: "#fff",
+  },
+  button: {
+    backgroundColor: "#7DBE7A",
+    borderRadius: 8,
+    padding: 15,
+    alignItems: "center",
+    marginTop: 25,
+    marginBottom: 15,
+  },
   buttonText: {
-    color: "#FFF",
+    color: "#fff",
     fontSize: 18,
     fontWeight: "bold",
   },
-
   loginText: {
     textAlign: "center",
-    marginTop: 20,
-    color: "#2563EB",
-    fontWeight: "600",
+    color: "#333",
+    fontSize: 15,
+    marginTop: 5,
   },
-
+  loginLink: {
+    color: "#2563EB",
+    fontWeight: "bold",
+  },
 });

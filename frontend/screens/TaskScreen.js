@@ -1,158 +1,127 @@
 import {
-  View, Text, StyleSheet, TouchableOpacity,
-  FlatList, TextInput, Modal
+  View, Text, StyleSheet, TouchableOpacity, FlatList, TextInput, Modal, Alert,
 } from "react-native";
 import { useState, useEffect } from "react";
-import { Ionicons } from "@expo/vector-icons";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import API from "../services/api";
 
 export default function TaskScreen() {
-  const [task, setTask] = useState("");
-  const [tasks, setTasks] = useState([]);
-  const [editingTask, setEditingTask] = useState(null);
-  const [editedTitle, setEditedTitle] = useState("");
+  const [tareas, setTareas] = useState([]);
+  const [filtro, setFiltro] = useState("pendiente");
   const [modalVisible, setModalVisible] = useState(false);
+  const [editingTarea, setEditingTarea] = useState(null);
+  const [titulo, setTitulo] = useState("");
+  const fecha_hoy = new Date();
+  const meses = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+  const fechaTexto = `${fecha_hoy.getDate()} de ${meses[fecha_hoy.getMonth()]}`;
 
-  useEffect(() => {
-    cargarTareas();
-  }, []);
-
-  const getToken = async () => await AsyncStorage.getItem("token");
+  useEffect(() => { cargarTareas(); }, []);
 
   const cargarTareas = async () => {
     try {
-      const token = await getToken();
-      const res = await API.get("/tareas", {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setTasks(res.data);
-    } catch (error) {
-      console.error("Error cargando tareas:", error);
-    }
+      const res = await API.get("/tareas");
+      setTareas(res.data);
+    } catch (e) { console.log(e); }
   };
 
-  const addTask = async () => {
-    if (!task.trim()) return;
-    try {
-      const token = await getToken();
-      await API.post("/tareas",
-        { titulo: task, estado: "pendiente", prioridad: "media" },
-        { headers: { Authorization: `Bearer ${token}` }}
-      );
-      setTask("");
-      cargarTareas();
-    } catch (error) {
-      console.error("Error agregando tarea:", error);
-    }
-  };
-
-  const deleteTask = async (id) => {
-    try {
-      const token = await getToken();
-      await API.delete(`/tareas/${id}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      cargarTareas();
-    } catch (error) {
-      console.error("Error eliminando tarea:", error);
-    }
-  };
-
-  const toggleTask = async (item) => {
-    try {
-      const token = await getToken();
-      const nuevoEstado = item.estado === "completada" ? "pendiente" : "completada";
-      await API.put(`/tareas/${item.id}`,
-        { ...item, estado: nuevoEstado },
-        { headers: { Authorization: `Bearer ${token}` }}
-      );
-      cargarTareas();
-    } catch (error) {
-      console.error("Error actualizando tarea:", error);
-    }
-  };
-
-  const openEditModal = (item) => {
-    setEditingTask(item);
-    setEditedTitle(item.titulo);
+  const abrirModal = (item = null) => {
+    setEditingTarea(item);
+    setTitulo(item ? item.titulo : "");
     setModalVisible(true);
   };
 
-  const saveEdit = async () => {
+  const guardar = async () => {
+    if (!titulo.trim()) { Alert.alert("Error", "Escribe un título"); return; }
     try {
-      const token = await getToken();
-      await API.put(`/tareas/${editingTask.id}`,
-        { ...editingTask, titulo: editedTitle },
-        { headers: { Authorization: `Bearer ${token}` }}
-      );
+      if (editingTarea) {
+        await API.put(`/tareas/${editingTarea.id}`, { ...editingTarea, titulo });
+      } else {
+        await API.post("/tareas", { titulo, estado: "pendiente", prioridad: "media" });
+      }
       setModalVisible(false);
       cargarTareas();
-    } catch (error) {
-      console.error("Error editando tarea:", error);
-    }
+    } catch (e) { Alert.alert("Error", "No se pudo guardar"); }
   };
 
-  const renderItem = ({ item }) => (
-    <View style={styles.taskCard}>
-      <TouchableOpacity style={styles.taskLeft} onPress={() => toggleTask(item)}>
-        <Ionicons
-          name={item.estado === "completada" ? "checkmark-circle" : "ellipse-outline"}
-          size={28}
-          color={item.estado === "completada" ? "#22C55E" : "#CBD5E1"}
-        />
-        <Text style={[styles.taskText, item.estado === "completada" && { textDecorationLine: "line-through", opacity: 0.5 }]}>
-          {item.titulo}
-        </Text>
-      </TouchableOpacity>
-      <View style={styles.actions}>
-        <TouchableOpacity onPress={() => openEditModal(item)}>
-          <Ionicons name="create-outline" size={24} color="#FACC15" />
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => deleteTask(item.id)}>
-          <Ionicons name="trash-outline" size={24} color="#EF4444" />
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
+  const toggleTarea = async (item) => {
+    try {
+      const nuevoEstado = item.estado === "completada" ? "pendiente" : "completada";
+      await API.put(`/tareas/${item.id}`, { ...item, estado: nuevoEstado });
+      cargarTareas();
+    } catch (e) { console.log(e); }
+  };
+
+  const eliminar = async (id) => {
+    try { await API.delete(`/tareas/${id}`); cargarTareas(); }
+    catch (e) { Alert.alert("Error", "No se pudo eliminar"); }
+  };
+
+  const filtradas = tareas.filter(t => t.estado === filtro);
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Mis Tareas</Text>
-      <View style={styles.inputContainer}>
-        <TextInput
-          placeholder="Nueva tarea..."
-          placeholderTextColor="#94A3B8"
-          style={styles.input}
-          value={task}
-          onChangeText={setTask}
-        />
-        <TouchableOpacity style={styles.addButton} onPress={addTask}>
-          <Ionicons name="add" size={28} color="white" />
+      <View style={styles.header}>
+        <View>
+          <Text style={styles.titulo}>Tareas</Text>
+          <Text style={styles.fecha}>{fechaTexto}</Text>
+          <Text style={styles.semana}>Semana Actual</Text>
+        </View>
+        <TouchableOpacity onPress={() => abrirModal()}>
+          <Text style={styles.addIcon}>＋</Text>
         </TouchableOpacity>
       </View>
+
+      <View style={styles.filtros}>
+        <TouchableOpacity
+          style={[styles.filtroBtn, filtro === "pendiente" && styles.filtroActivo]}
+          onPress={() => setFiltro("pendiente")}
+        >
+          <Text style={[styles.filtroText, filtro === "pendiente" && styles.filtroTextActivo]}>Pendientes</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.filtroBtn, filtro === "completada" && styles.filtroActivo]}
+          onPress={() => setFiltro("completada")}
+        >
+          <Text style={[styles.filtroText, filtro === "completada" && styles.filtroTextActivo]}>Entregadas</Text>
+        </TouchableOpacity>
+      </View>
+
+      <Text style={styles.seccion}>{filtro === "pendiente" ? "Pendientes" : "Completadas"}</Text>
+
       <FlatList
-        data={tasks}
+        data={filtradas}
         keyExtractor={(item) => item.id.toString()}
-        renderItem={renderItem}
+        renderItem={({ item }) => (
+          <TouchableOpacity
+            style={styles.tareaCard}
+            onPress={() => toggleTarea(item)}
+            onLongPress={() => abrirModal(item)}
+          >
+            <View style={[styles.dot, { backgroundColor: item.estado === "completada" ? "#7DBE7A" : "#E74C3C" }]} />
+            <Text style={[styles.tareaTitulo, item.estado === "completada" && styles.tachado]}>
+              {item.titulo}
+            </Text>
+          </TouchableOpacity>
+        )}
+        ListEmptyComponent={<Text style={styles.vacio}>No hay tareas {filtro === "pendiente" ? "pendientes" : "completadas"}</Text>}
         contentContainerStyle={{ paddingBottom: 30 }}
       />
+
       <Modal visible={modalVisible} transparent animationType="slide">
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Editar Tarea</Text>
+            <Text style={styles.modalTitulo}>{editingTarea ? "Editar Tarea" : "Nueva Tarea"}</Text>
             <TextInput
-              style={styles.modalInput}
-              value={editedTitle}
-              onChangeText={setEditedTitle}
-              placeholder="Editar tarea"
-              placeholderTextColor="#CBD5E1"
+              style={styles.input}
+              placeholder="Título de la tarea"
+              value={titulo}
+              onChangeText={setTitulo}
+              placeholderTextColor="#aaa"
             />
-            <TouchableOpacity style={styles.saveButton} onPress={saveEdit}>
-              <Text style={styles.saveButtonText}>Guardar Cambios</Text>
+            <TouchableOpacity style={styles.btnGuardar} onPress={guardar}>
+              <Text style={styles.btnGuardarText}>Guardar</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.cancelButton} onPress={() => setModalVisible(false)}>
-              <Text style={styles.cancelButtonText}>Cancelar</Text>
+            <TouchableOpacity style={styles.btnCancelar} onPress={() => setModalVisible(false)}>
+              <Text style={styles.btnCancelarText}>Cancelar</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -162,21 +131,29 @@ export default function TaskScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#0F172A", padding: 20 },
-  title: { color: "white", fontSize: 32, fontWeight: "bold", marginBottom: 20, marginTop: 20 },
-  inputContainer: { flexDirection: "row", marginBottom: 20 },
-  input: { flex: 1, backgroundColor: "#1E293B", color: "white", borderRadius: 14, paddingHorizontal: 15, marginRight: 10, height: 55 },
-  addButton: { width: 55, height: 55, backgroundColor: "#2563EB", borderRadius: 14, justifyContent: "center", alignItems: "center" },
-  taskCard: { backgroundColor: "#1E293B", borderRadius: 16, padding: 18, marginBottom: 12, flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  taskLeft: { flexDirection: "row", alignItems: "center", flex: 1 },
-  taskText: { color: "white", marginLeft: 15, fontSize: 16 },
-  actions: { flexDirection: "row", gap: 15 },
-  modalContainer: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "rgba(0,0,0,0.7)" },
-  modalContent: { width: "90%", backgroundColor: "#1E293B", padding: 25, borderRadius: 20 },
-  modalTitle: { color: "white", fontSize: 22, fontWeight: "bold", marginBottom: 20 },
-  modalInput: { backgroundColor: "#334155", color: "white", borderRadius: 12, paddingHorizontal: 15, height: 55, marginBottom: 20 },
-  saveButton: { backgroundColor: "#2563EB", padding: 15, borderRadius: 12, alignItems: "center" },
-  saveButtonText: { color: "white", fontWeight: "bold", fontSize: 16 },
-  cancelButton: { marginTop: 10, padding: 15, borderRadius: 12, backgroundColor: "#475569", alignItems: "center" },
-  cancelButtonText: { color: "white", fontWeight: "bold" },
+  container: { flex: 1, backgroundColor: "#F6EFD6", padding: 20 },
+  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginTop: 40, marginBottom: 20 },
+  titulo: { fontSize: 26, fontWeight: "bold", color: "#222" },
+  fecha: { fontSize: 14, color: "#555" },
+  semana: { fontSize: 13, color: "#777", marginTop: 2 },
+  addIcon: { fontSize: 30, color: "#222" },
+  filtros: { flexDirection: "row", gap: 10, marginBottom: 20 },
+  filtroBtn: { flex: 1, paddingVertical: 10, borderRadius: 8, backgroundColor: "#D4C9A8", alignItems: "center" },
+  filtroActivo: { backgroundColor: "#6B8F4E" },
+  filtroText: { color: "#444", fontWeight: "bold" },
+  filtroTextActivo: { color: "#fff" },
+  seccion: { fontSize: 16, fontWeight: "bold", color: "#333", marginBottom: 12 },
+  tareaCard: { backgroundColor: "#fff", borderRadius: 12, padding: 18, marginBottom: 12, flexDirection: "row", alignItems: "center", gap: 12, borderWidth: 1, borderColor: "#ddd" },
+  dot: { width: 14, height: 14, borderRadius: 7 },
+  tareaTitulo: { fontSize: 16, color: "#222", flex: 1 },
+  tachado: { textDecorationLine: "line-through", color: "#888" },
+  vacio: { textAlign: "center", color: "#888", marginTop: 30 },
+  modalContainer: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "rgba(0,0,0,0.5)" },
+  modalContent: { width: "90%", backgroundColor: "#F6EFD6", padding: 25, borderRadius: 16 },
+  modalTitulo: { fontSize: 20, fontWeight: "bold", color: "#222", marginBottom: 15 },
+  input: { backgroundColor: "#fff", borderRadius: 8, padding: 12, marginBottom: 10, borderWidth: 1, borderColor: "#ddd", fontSize: 15 },
+  btnGuardar: { backgroundColor: "#7DBE7A", borderRadius: 8, padding: 14, alignItems: "center", marginTop: 5 },
+  btnGuardarText: { color: "#fff", fontWeight: "bold", fontSize: 16 },
+  btnCancelar: { backgroundColor: "#ccc", borderRadius: 8, padding: 14, alignItems: "center", marginTop: 8 },
+  btnCancelarText: { color: "#333", fontWeight: "bold", fontSize: 16 },
 });

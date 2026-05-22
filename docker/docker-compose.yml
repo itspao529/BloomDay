@@ -30,7 +30,7 @@ services:
       MYSQL_ROOT_PASSWORD: bloomday123
       MYSQL_DATABASE: proyecto_db
     ports:
-      - "3306:3306"
+      - "3307:3306"
     volumes:
       - db_data:/var/lib/mysql
       - ../db/database.sql:/docker-entrypoint-initdb.d/database.sql

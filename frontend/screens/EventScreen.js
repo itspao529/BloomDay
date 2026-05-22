@@ -1,152 +1,122 @@
 import {
-  View, Text, StyleSheet, TouchableOpacity,
-  FlatList, TextInput, Modal,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, FlatList, Modal, TextInput, Alert,
 } from "react-native";
 import { useState, useEffect } from "react";
-import { Ionicons } from "@expo/vector-icons";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import API from "../services/api";
+import { getEvents, createEvent, updateEvent, deleteEvent } from "../services/eventService";
 
 export default function EventScreen() {
-  const [event, setEvent] = useState("");
-  const [events, setEvents] = useState([]);
-  const [editingEvent, setEditingEvent] = useState(null);
+  const [eventos, setEventos] = useState([]);
+  const [filtro, setFiltro] = useState("Todos");
   const [modalVisible, setModalVisible] = useState(false);
-  const [editedTitle, setEditedTitle] = useState("");
+  const [editingEvento, setEditingEvento] = useState(null);
+  const [titulo, setTitulo] = useState("");
+  const [descripcion, setDescripcion] = useState("");
+  const [lugar, setLugar] = useState("");
+  const [fecha, setFecha] = useState("");
+  const fecha_hoy = new Date();
+  const meses = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+  const fechaTexto = `${fecha_hoy.getDate()} de ${meses[fecha_hoy.getMonth()]}`;
 
-  useEffect(() => {
-    cargarEventos();
-  }, []);
-
-  const getToken = async () => {
-    return await AsyncStorage.getItem("token");
-  };
+  useEffect(() => { cargarEventos(); }, []);
 
   const cargarEventos = async () => {
     try {
-      const token = await getToken();
-      const res = await API.get("/eventos", {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setEvents(res.data);
-    } catch (error) {
-      console.error("Error cargando eventos:", error);
-    }
+      const data = await getEvents();
+      setEventos(data);
+    } catch (e) { console.log(e); }
   };
 
-  const addEvent = async () => {
-    if (!event.trim()) return;
-    try {
-      const token = await getToken();
-      await API.post("/eventos",
-        {
-          titulo: event,
-          fecha: new Date().toISOString().split("T")[0],
-          descripcion: "",
-          lugar: ""
-        },
-        { headers: { Authorization: `Bearer ${token}` }}
-      );
-      setEvent("");
-      cargarEventos();
-    } catch (error) {
-      console.error("Error agregando evento:", error);
+  const abrirModal = (item = null) => {
+    if (item) {
+      setEditingEvento(item);
+      setTitulo(item.titulo);
+      setDescripcion(item.descripcion || "");
+      setLugar(item.lugar || "");
+      setFecha(item.fecha ? item.fecha.split("T")[0] : "");
+    } else {
+      setEditingEvento(null);
+      setTitulo(""); setDescripcion(""); setLugar(""); setFecha("");
     }
-  };
-
-  const deleteEvent = async (id) => {
-    try {
-      const token = await getToken();
-      await API.delete(`/eventos/${id}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      cargarEventos();
-    } catch (error) {
-      console.error("Error eliminando evento:", error);
-    }
-  };
-
-  const openEditModal = (item) => {
-    setEditingEvent(item);
-    setEditedTitle(item.titulo);
     setModalVisible(true);
   };
 
-  const saveEdit = async () => {
+  const guardar = async () => {
+    if (!titulo || !fecha) { Alert.alert("Error", "Título y fecha son requeridos"); return; }
     try {
-      const token = await getToken();
-      await API.put(`/eventos/${editingEvent.id}`,
-        {
-          titulo: editedTitle,
-          fecha: editingEvent.fecha,
-          descripcion: editingEvent.descripcion,
-          lugar: editingEvent.lugar
-        },
-        { headers: { Authorization: `Bearer ${token}` }}
-      );
+      if (editingEvento) {
+        await updateEvent(editingEvento.id, titulo, descripcion, fecha + "T08:00:00", lugar);
+      } else {
+        await createEvent(titulo, descripcion, fecha + "T08:00:00", lugar);
+      }
       setModalVisible(false);
       cargarEventos();
-    } catch (error) {
-      console.error("Error editando evento:", error);
-    }
+    } catch (e) { Alert.alert("Error", "No se pudo guardar el evento"); }
   };
 
-  const renderItem = ({ item }) => (
-    <View style={styles.eventCard}>
-      <View style={styles.eventInfo}>
-        <Ionicons name="calendar-outline" size={28} color="#2563EB" />
-        <View style={styles.textContainer}>
-          <Text style={styles.eventTitle}>{item.titulo}</Text>
-          <Text style={styles.eventDate}>{item.fecha}</Text>
-        </View>
-      </View>
-      <View style={styles.actions}>
-        <TouchableOpacity onPress={() => openEditModal(item)}>
-          <Ionicons name="create-outline" size={24} color="#FACC15" />
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => deleteEvent(item.id)}>
-          <Ionicons name="trash-outline" size={24} color="#EF4444" />
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
+  const eliminar = async (id) => {
+    try { await deleteEvent(id); cargarEventos(); }
+    catch (e) { Alert.alert("Error", "No se pudo eliminar"); }
+  };
+
+  const filtrados = filtro === "Todos" ? eventos : eventos.filter(e => e.tipo === filtro);
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Eventos</Text>
-      <View style={styles.inputContainer}>
-        <TextInput
-          placeholder="Nuevo evento..."
-          placeholderTextColor="#94A3B8"
-          style={styles.input}
-          value={event}
-          onChangeText={setEvent}
-        />
-        <TouchableOpacity style={styles.addButton} onPress={addEvent}>
-          <Ionicons name="add" size={28} color="white" />
+      <View style={styles.header}>
+        <View>
+          <Text style={styles.titulo}>Eventos</Text>
+          <Text style={styles.fecha}>{fechaTexto}</Text>
+        </View>
+        <TouchableOpacity onPress={() => abrirModal()}>
+          <Text style={styles.filtroIcon}>＋</Text>
         </TouchableOpacity>
       </View>
+
+      <View style={styles.filtros}>
+        {["Todos", "Reuniones", "Festivos"].map(f => (
+          <TouchableOpacity
+            key={f}
+            style={[styles.filtroBtn, filtro === f && styles.filtroActivo]}
+            onPress={() => setFiltro(f)}
+          >
+            <Text style={[styles.filtroText, filtro === f && styles.filtroTextActivo]}>{f}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
       <FlatList
-        data={events}
+        data={filtrados}
         keyExtractor={(item) => item.id.toString()}
-        renderItem={renderItem}
+        renderItem={({ item }) => (
+          <TouchableOpacity style={styles.eventoCard} onLongPress={() => eliminar(item.id)} onPress={() => abrirModal(item)}>
+            <View style={styles.eventoFechaBox}>
+              <Text style={styles.eventoFechaNum}>
+                {item.fecha ? new Date(item.fecha).getDate() : "?"} de
+              </Text>
+              <Text style={styles.eventoFechaMes}>
+                {item.fecha ? meses[new Date(item.fecha).getMonth()] : ""}
+              </Text>
+            </View>
+            <Text style={styles.eventoTitulo}>{item.titulo} 👤</Text>
+          </TouchableOpacity>
+        )}
+        ListEmptyComponent={<Text style={styles.vacio}>No hay eventos</Text>}
         contentContainerStyle={{ paddingBottom: 30 }}
       />
+
       <Modal visible={modalVisible} transparent animationType="slide">
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Editar Evento</Text>
-            <TextInput
-              style={styles.modalInput}
-              value={editedTitle}
-              onChangeText={setEditedTitle}
-              placeholder="Editar evento"
-            />
-            <TouchableOpacity style={styles.saveButton} onPress={saveEdit}>
-              <Text style={styles.saveButtonText}>Guardar Cambios</Text>
+            <Text style={styles.modalTitulo}>{editingEvento ? "Editar Evento" : "Nuevo Evento"}</Text>
+            <TextInput style={styles.input} placeholder="Título" value={titulo} onChangeText={setTitulo} placeholderTextColor="#aaa" />
+            <TextInput style={styles.input} placeholder="Descripción" value={descripcion} onChangeText={setDescripcion} placeholderTextColor="#aaa" />
+            <TextInput style={styles.input} placeholder="Lugar" value={lugar} onChangeText={setLugar} placeholderTextColor="#aaa" />
+            <TextInput style={styles.input} placeholder="Fecha (YYYY-MM-DD)" value={fecha} onChangeText={setFecha} placeholderTextColor="#aaa" />
+            <TouchableOpacity style={styles.btnGuardar} onPress={guardar}>
+              <Text style={styles.btnGuardarText}>Guardar</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.cancelButton} onPress={() => setModalVisible(false)}>
-              <Text style={styles.cancelButtonText}>Cancelar</Text>
+            <TouchableOpacity style={styles.btnCancelar} onPress={() => setModalVisible(false)}>
+              <Text style={styles.btnCancelarText}>Cancelar</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -156,23 +126,28 @@ export default function EventScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#0F172A", padding: 20 },
-  title: { color: "white", fontSize: 32, fontWeight: "bold", marginBottom: 20, marginTop: 20 },
-  inputContainer: { flexDirection: "row", marginBottom: 20 },
-  input: { flex: 1, backgroundColor: "#1E293B", color: "white", borderRadius: 14, paddingHorizontal: 15, marginRight: 10, height: 55 },
-  addButton: { width: 55, height: 55, backgroundColor: "#2563EB", borderRadius: 14, justifyContent: "center", alignItems: "center" },
-  eventCard: { backgroundColor: "#1E293B", borderRadius: 16, padding: 18, marginBottom: 12, flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  eventInfo: { flexDirection: "row", alignItems: "center", flex: 1 },
-  textContainer: { marginLeft: 15 },
-  eventTitle: { color: "white", fontSize: 16, fontWeight: "bold" },
-  eventDate: { color: "#CBD5E1", marginTop: 4 },
-  actions: { flexDirection: "row", gap: 15 },
-  modalContainer: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "rgba(0,0,0,0.7)" },
-  modalContent: { width: "90%", backgroundColor: "#1E293B", padding: 25, borderRadius: 20 },
-  modalTitle: { color: "white", fontSize: 22, fontWeight: "bold", marginBottom: 20 },
-  modalInput: { backgroundColor: "#334155", color: "white", borderRadius: 12, paddingHorizontal: 15, height: 55, marginBottom: 20 },
-  saveButton: { backgroundColor: "#2563EB", padding: 15, borderRadius: 12, alignItems: "center" },
-  saveButtonText: { color: "white", fontWeight: "bold", fontSize: 16 },
-  cancelButton: { marginTop: 10, padding: 15, borderRadius: 12, backgroundColor: "#475569", alignItems: "center" },
-  cancelButtonText: { color: "white", fontWeight: "bold" },
+  container: { flex: 1, backgroundColor: "#F6EFD6", padding: 20 },
+  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: 40, marginBottom: 20 },
+  titulo: { fontSize: 26, fontWeight: "bold", color: "#222" },
+  fecha: { fontSize: 14, color: "#555" },
+  filtroIcon: { fontSize: 30, color: "#222" },
+  filtros: { flexDirection: "row", gap: 10, marginBottom: 20 },
+  filtroBtn: { paddingHorizontal: 18, paddingVertical: 8, borderRadius: 8, backgroundColor: "#D4C9A8", borderWidth: 1, borderColor: "#bbb" },
+  filtroActivo: { backgroundColor: "#6B8F4E" },
+  filtroText: { color: "#444", fontWeight: "bold" },
+  filtroTextActivo: { color: "#fff" },
+  eventoCard: { backgroundColor: "#ADD8E6", borderRadius: 12, padding: 18, marginBottom: 12, flexDirection: "row", alignItems: "center", gap: 15 },
+  eventoFechaBox: { backgroundColor: "#4A90D9", borderRadius: 8, padding: 10, alignItems: "center", minWidth: 60 },
+  eventoFechaNum: { color: "#fff", fontWeight: "bold", fontSize: 13 },
+  eventoFechaMes: { color: "#fff", fontSize: 12 },
+  eventoTitulo: { fontSize: 16, fontWeight: "bold", color: "#222", flex: 1 },
+  vacio: { textAlign: "center", color: "#888", marginTop: 30 },
+  modalContainer: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "rgba(0,0,0,0.5)" },
+  modalContent: { width: "90%", backgroundColor: "#F6EFD6", padding: 25, borderRadius: 16 },
+  modalTitulo: { fontSize: 20, fontWeight: "bold", color: "#222", marginBottom: 15 },
+  input: { backgroundColor: "#fff", borderRadius: 8, padding: 12, marginBottom: 10, borderWidth: 1, borderColor: "#ddd", fontSize: 15 },
+  btnGuardar: { backgroundColor: "#7DBE7A", borderRadius: 8, padding: 14, alignItems: "center", marginTop: 5 },
+  btnGuardarText: { color: "#fff", fontWeight: "bold", fontSize: 16 },
+  btnCancelar: { backgroundColor: "#ccc", borderRadius: 8, padding: 14, alignItems: "center", marginTop: 8 },
+  btnCancelarText: { color: "#333", fontWeight: "bold", fontSize: 16 },
 });

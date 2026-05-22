@@ -1,83 +1,113 @@
-import { View, Text, StyleSheet, FlatList, TouchableOpacity } from "react-native";
+import {
+  View, Text, StyleSheet, FlatList, TouchableOpacity,
+} from "react-native";
 import { useState, useEffect } from "react";
-import { Ionicons } from "@expo/vector-icons";
 import API from "../services/api";
 
 export default function NotificationScreen() {
   const [notificaciones, setNotificaciones] = useState([]);
+  const [filtro, setFiltro] = useState("todas");
 
-  useEffect(() => {
-    cargarNotificaciones();
-  }, []);
+  useEffect(() => { cargarNotificaciones(); }, []);
 
   const cargarNotificaciones = async () => {
     try {
       const res = await API.get("/notificaciones");
       setNotificaciones(res.data);
-    } catch (error) {
-      console.error("Error cargando notificaciones:", error);
-    }
+    } catch (e) { console.log(e); }
   };
 
   const marcarLeida = async (id) => {
     try {
       await API.put(`/notificaciones/${id}/leer`, {});
       cargarNotificaciones();
-    } catch (error) {
-      console.error("Error marcando notificación:", error);
-    }
+    } catch (e) { console.log(e); }
   };
 
-  if (notificaciones.length === 0) {
-    return (
-      <View style={styles.container}>
-        <View style={styles.iconWrapper}>
-          <Ionicons name="notifications-off-outline" size={70} color="#2563EB" />
-        </View>
-        <Text style={styles.title}>Sin notificaciones</Text>
-        <Text style={styles.description}>
-          Aquí aparecerán tus alertas, mensajes y actualizaciones importantes.
-        </Text>
-      </View>
-    );
-  }
+  const hoy = new Date().toDateString();
+  const notifHoy = notificaciones.filter(n => new Date(n.creado_en).toDateString() === hoy);
+  const notifAnteriores = notificaciones.filter(n => new Date(n.creado_en).toDateString() !== hoy);
+  const sinLeer = notificaciones.filter(n => !n.leida);
+
+  const mostrar = filtro === "todas" ? { hoy: notifHoy, anteriores: notifAnteriores } : { hoy: sinLeer, anteriores: [] };
+
+  const renderItem = ({ item }) => (
+    <TouchableOpacity
+      style={[styles.notifCard, item.leida && styles.leida]}
+      onPress={() => marcarLeida(item.id)}
+    >
+      <View style={[styles.dot, { backgroundColor: item.leida ? "#7DBE7A" : "#E74C3C" }]} />
+      <Text style={styles.notifText}>{item.mensaje}</Text>
+    </TouchableOpacity>
+  );
 
   return (
-    <View style={styles.containerList}>
-      <Text style={styles.title}>Notificaciones</Text>
-      <FlatList
-        data={notificaciones}
-        keyExtractor={(item) => item.id.toString()}
-        renderItem={({ item }) => (
-          <TouchableOpacity
-            style={[styles.notifCard, item.leida && styles.leida]}
-            onPress={() => marcarLeida(item.id)}
-          >
-            <Ionicons
-              name={item.leida ? "checkmark-circle" : "notifications-outline"}
-              size={24}
-              color={item.leida ? "#22C55E" : "#2563EB"}
-            />
-            <View style={styles.notifText}>
-              <Text style={styles.notifTitulo}>{item.titulo}</Text>
-              <Text style={styles.notifMensaje}>{item.mensaje}</Text>
-            </View>
-          </TouchableOpacity>
-        )}
-      />
+    <View style={styles.container}>
+      <Text style={styles.titulo}>Notificaciones</Text>
+
+      <View style={styles.filtros}>
+        <TouchableOpacity
+          style={[styles.filtroBtn, filtro === "todas" && styles.filtroActivo]}
+          onPress={() => setFiltro("todas")}
+        >
+          <Text style={[styles.filtroText, filtro === "todas" && styles.filtroTextActivo]}>Todo... &gt;</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.filtroBtn, filtro === "sinleer" && styles.filtroActivo]}
+          onPress={() => setFiltro("sinleer")}
+        >
+          <Text style={[styles.filtroText, filtro === "sinleer" && styles.filtroTextActivo]}>Sin Leer... &gt;</Text>
+        </TouchableOpacity>
+      </View>
+
+      {mostrar.hoy.length > 0 && (
+        <>
+          <Text style={styles.seccion}>Hoy</Text>
+          <FlatList
+            data={mostrar.hoy}
+            keyExtractor={(item) => item.id.toString()}
+            renderItem={renderItem}
+            scrollEnabled={false}
+          />
+        </>
+      )}
+
+      {mostrar.anteriores.length > 0 && (
+        <>
+          <Text style={styles.seccion}>Anteriores</Text>
+          <FlatList
+            data={mostrar.anteriores}
+            keyExtractor={(item) => item.id.toString()}
+            renderItem={renderItem}
+            scrollEnabled={false}
+          />
+        </>
+      )}
+
+      {notificaciones.length === 0 && (
+        <View style={styles.vacio}>
+          <Text style={styles.vaciIcon}>🔔</Text>
+          <Text style={styles.vacioText}>No hay notificaciones</Text>
+        </View>
+      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#0F172A", justifyContent: "center", alignItems: "center", padding: 24 },
-  containerList: { flex: 1, backgroundColor: "#0F172A", padding: 20 },
-  iconWrapper: { width: 120, height: 120, borderRadius: 60, backgroundColor: "rgba(37, 99, 235, 0.1)", justifyContent: "center", alignItems: "center", marginBottom: 20 },
-  title: { color: "white", fontSize: 28, fontWeight: "700", textAlign: "center", marginBottom: 20, marginTop: 20 },
-  description: { color: "#94A3B8", textAlign: "center", marginTop: 10, fontSize: 15, lineHeight: 22, maxWidth: 300 },
-  notifCard: { backgroundColor: "#1E293B", borderRadius: 16, padding: 16, marginBottom: 12, flexDirection: "row", alignItems: "center", gap: 12 },
-  leida: { opacity: 0.5 },
-  notifText: { flex: 1 },
-  notifTitulo: { color: "white", fontWeight: "bold", fontSize: 15 },
-  notifMensaje: { color: "#94A3B8", marginTop: 4 },
+  container: { flex: 1, backgroundColor: "#F6EFD6", padding: 20 },
+  titulo: { fontSize: 26, fontWeight: "bold", color: "#222", marginTop: 40, marginBottom: 20 },
+  filtros: { flexDirection: "row", gap: 10, marginBottom: 20 },
+  filtroBtn: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 8, backgroundColor: "#fff", borderWidth: 1, borderColor: "#ddd" },
+  filtroActivo: { backgroundColor: "#6B8F4E" },
+  filtroText: { color: "#444", fontWeight: "bold" },
+  filtroTextActivo: { color: "#fff" },
+  seccion: { fontSize: 16, fontWeight: "bold", color: "#333", marginBottom: 10, marginTop: 5 },
+  notifCard: { backgroundColor: "#fff", borderRadius: 12, padding: 16, marginBottom: 10, flexDirection: "row", alignItems: "center", gap: 12, borderWidth: 1, borderColor: "#ddd" },
+  leida: { opacity: 0.6 },
+  dot: { width: 12, height: 12, borderRadius: 6 },
+  notifText: { flex: 1, fontSize: 15, color: "#222" },
+  vacio: { flex: 1, justifyContent: "center", alignItems: "center", marginTop: 80 },
+  vaciIcon: { fontSize: 60, marginBottom: 15 },
+  vacioText: { fontSize: 16, color: "#888" },
 });
