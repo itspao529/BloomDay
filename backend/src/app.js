@@ -4,28 +4,24 @@ require('dotenv').config();
 
 const app = express();
 
-// Middlewares globales 
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Rutas 
 app.use('/api/auth',           require('./routes/auth'));
 app.use('/api/eventos',        require('./routes/eventos'));
 app.use('/api/tareas',         require('./routes/tareas'));
 app.use('/api/notificaciones', require('./routes/notificaciones'));
+app.use('/api/usuarios',       require('./routes/usuarios'));
 
-// Ruta de prueba
 app.get('/', (req, res) => {
-  res.json({ mensaje: ' API funcionando correctamente.' });
+  res.json({ mensaje: 'API funcionando correctamente.' });
 });
 
-//Manejo de rutas no encontradas 
 app.use((req, res) => {
   res.status(404).json({ mensaje: 'Ruta no encontrada.' });
 });
 
-//Iniciar servidor 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Servidor corriendo en http://localhost:${PORT}`);

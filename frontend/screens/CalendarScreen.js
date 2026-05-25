@@ -1,7 +1,16 @@
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, FlatList, Modal, Alert } from "react-native";
-import { Calendar } from "react-native-calendars";
+import { Calendar, LocaleConfig } from "react-native-calendars";
 import { useState, useEffect } from "react";
 import { getEvents, createEvent, updateEvent, deleteEvent } from "../services/eventService";
+
+LocaleConfig.locales["es"] = {
+  monthNames: ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"],
+  monthNamesShort: ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"],
+  dayNames: ["Domingo","Lunes","Martes","Miércoles","Jueves","Viernes","Sábado"],
+  dayNamesShort: ["Dom","Lun","Mar","Mié","Jue","Vie","Sáb"],
+  today: "Hoy",
+};
+LocaleConfig.defaultLocale = "es";
 
 export default function CalendarScreen() {
   const [selectedDate, setSelectedDate] = useState("");
@@ -46,12 +55,27 @@ export default function CalendarScreen() {
         <Text style={styles.subtitulo}>del Salón Kinder</Text>
       </View>
       <View style={styles.calendarContainer}>
-        <Calendar onDayPress={day => setSelectedDate(day.dateString)} markedDates={markedDates}
-          theme={{ backgroundColor: "#fff", calendarBackground: "#fff", textSectionTitleColor: "#AAA", selectedDayBackgroundColor: "#FF6B9D", selectedDayTextColor: "#fff", todayTextColor: "#FF6B9D", dayTextColor: "#2D2D2D", textDisabledColor: "#DDD", monthTextColor: "#2D2D2D", arrowColor: "#FF6B9D", dotColor: "#FF6B9D", textMonthFontWeight: "900", textDayFontWeight: "600" }} />
+        <Calendar
+          onDayPress={day => setSelectedDate(day.dateString)}
+          markedDates={markedDates}
+          theme={{
+            backgroundColor: "#fff", calendarBackground: "#fff",
+            textSectionTitleColor: "#AAA", selectedDayBackgroundColor: "#FF6B9D",
+            selectedDayTextColor: "#fff", todayTextColor: "#FF6B9D",
+            dayTextColor: "#2D2D2D", textDisabledColor: "#DDD",
+            monthTextColor: "#2D2D2D", arrowColor: "#FF6B9D",
+            dotColor: "#FF6B9D", textMonthFontWeight: "900", textDayFontWeight: "600",
+          }}
+        />
       </View>
       <View style={styles.inputContainer}>
-        <View style={styles.inputBox}><Text style={styles.inputIcon}>✏️</Text><TextInput placeholder="Agregar evento en esta fecha..." placeholderTextColor="#BBB" style={styles.input} value={eventText} onChangeText={setEventText} /></View>
-        <TouchableOpacity style={styles.addButton} onPress={addEvent} disabled={loading}><Text style={styles.addButtonText}>{loading ? "..." : "＋"}</Text></TouchableOpacity>
+        <View style={styles.inputBox}>
+          <Text style={styles.inputIcon}>✏️</Text>
+          <TextInput placeholder="Agregar evento en esta fecha..." placeholderTextColor="#BBB" style={styles.input} value={eventText} onChangeText={setEventText} />
+        </View>
+        <TouchableOpacity style={styles.addButton} onPress={addEvent} disabled={loading}>
+          <Text style={styles.addButtonText}>{loading ? "..." : "＋"}</Text>
+        </TouchableOpacity>
       </View>
       <Text style={styles.seccionTitulo}>{selectedDate ? `🗓️ Eventos del ${selectedDate}` : "🗓️ Selecciona una fecha"}</Text>
       {selectedEvents.length === 0 && selectedDate && <View style={styles.vacioBox}><Text style={styles.vacioEmoji}>🌟</Text><Text style={styles.vacioText}>No hay eventos este día</Text></View>}

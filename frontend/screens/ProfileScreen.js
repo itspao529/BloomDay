@@ -12,7 +12,7 @@ export default function ProfileScreen({ navigation }) {
       { text: "Salir 👋", style: "destructive", onPress: async () => { await AsyncStorage.removeItem("token"); await AsyncStorage.removeItem("user"); navigation.replace("Login"); } }
     ]);
   };
-  const esAdmin = usuario?.rol === "admin" || usuario?.rol === "maestro";
+  const esAdmin = usuario?.rol === "admin" || usuario?.rol === "admin";
   const iniciales = usuario?.nombre ? usuario.nombre.split(" ").map(n => n[0]).join("").substring(0, 2).toUpperCase() : "??";
 
   return (

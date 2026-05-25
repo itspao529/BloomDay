@@ -11,7 +11,7 @@ export default function AlumnosScreen() {
   const [editingAlumno, setEditingAlumno] = useState(null);
 
   useEffect(() => { cargarAlumnos(); }, []);
-  const cargarAlumnos = async () => { try { const res = await API.get("/usuarios"); setAlumnos(res.data.filter(u => u.rol !== "admin" && u.rol !== "maestro")); } catch (e) { console.log(e); } };
+  const cargarAlumnos = async () => { try { const res = await API.get("/usuarios"); setAlumnos(res.data.filter(u => u.rol !== "admin" && u.rol !== "admin")); } catch (e) { console.log(e); } };
   const abrirModal = (item = null) => { setEditingAlumno(item); setNombre(item ? item.nombre : ""); setEdad(item ? String(item.edad || "") : ""); setTutor(item ? item.tutor || "" : ""); setModalVisible(true); };
   const guardar = async () => {
     if (!nombre.trim()) { Alert.alert("¡Ups!", "Escribe el nombre del alumno"); return; }

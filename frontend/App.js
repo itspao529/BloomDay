@@ -2,7 +2,6 @@ import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Text } from "react-native";
-
 import SplashScreen from "./screens/SplashScreen";
 import LoginScreen from "./screens/LoginScreen";
 import RegisterScreen from "./screens/RegisterScreen";
@@ -43,15 +42,15 @@ function TabNavigator() {
         tabBarLabelStyle: { fontSize: 10, fontWeight: "700" },
       }}
     >
-      <Tab.Screen name="Home" component={HomeScreen}
+      <Tab.Screen name="Inicio" component={HomeScreen}
         options={{ tabBarLabel: "Inicio", tabBarIcon: ({ color }) => <Text style={{ fontSize: 22, color }}>🏠</Text> }} />
-      <Tab.Screen name="Events" component={EventScreen}
-        options={{ tabBarLabel: "Eventos", tabBarIcon: ({ color }) => <Text style={{ fontSize: 22, color }}>🎉</Text> }} />
-      <Tab.Screen name="Calendar" component={CalendarScreen}
-        options={{ tabBarLabel: "Calendario", tabBarIcon: ({ color }) => <Text style={{ fontSize: 22, color }}>📅</Text> }} />
-      <Tab.Screen name="Notifications" component={NotificationScreen}
-        options={{ tabBarLabel: "Avisos", tabBarIcon: ({ color }) => <Text style={{ fontSize: 22, color }}>🔔</Text> }} />
-      <Tab.Screen name="Mas" component={ProfileScreen}
+      <Tab.Screen name="Alumnos" component={AlumnosScreen}
+        options={{ tabBarLabel: "Alumnos", tabBarIcon: ({ color }) => <Text style={{ fontSize: 22, color }}>👧</Text> }} />
+      <Tab.Screen name="Tareas" component={TaskScreen}
+        options={{ tabBarLabel: "Tareas", tabBarIcon: ({ color }) => <Text style={{ fontSize: 22, color }}>📋</Text> }} />
+      <Tab.Screen name="Asistencia" component={AsistenciaScreen}
+        options={{ tabBarLabel: "Asistencia", tabBarIcon: ({ color }) => <Text style={{ fontSize: 22, color }}>✅</Text> }} />
+      <Tab.Screen name="Perfil" component={ProfileScreen}
         options={{ tabBarLabel: "Más", tabBarIcon: ({ color }) => <Text style={{ fontSize: 22, color }}>☰</Text> }} />
     </Tab.Navigator>
   );
@@ -66,6 +65,9 @@ export default function App() {
         <Stack.Screen name="Register" component={RegisterScreen} />
         <Stack.Screen name="Home" component={TabNavigator} />
         <Stack.Screen name="Tasks" component={TaskScreen} />
+        <Stack.Screen name="Events" component={EventScreen} />
+        <Stack.Screen name="Calendar" component={CalendarScreen} />
+        <Stack.Screen name="Notifications" component={NotificationScreen} />
         <Stack.Screen name="Alumnos" component={AlumnosScreen} />
         <Stack.Screen name="Materias" component={MateriasScreen} />
         <Stack.Screen name="Calificaciones" component={CalificacionesScreen} />

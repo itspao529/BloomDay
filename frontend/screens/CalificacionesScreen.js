@@ -15,7 +15,7 @@ export default function CalificacionesScreen() {
   const [nota, setNota] = useState("");
 
   useEffect(() => { cargarAlumnos(); }, []);
-  const cargarAlumnos = async () => { try { const res = await API.get("/usuarios"); setAlumnos(res.data.filter(u => u.rol !== "admin" && u.rol !== "maestro")); } catch (e) { console.log(e); } };
+  const cargarAlumnos = async () => { try { const res = await API.get("/usuarios"); setAlumnos(res.data.filter(u => u.rol !== "admin" && u.rol !== "admin")); } catch (e) { console.log(e); } };
   const abrirModal = (alumno, materia) => { setAlumnoSel(alumno); setMateriaSel(materia); setNota(calificaciones[`${alumno.id}-${materia}`] || ""); setModalVisible(true); };
   const guardarNota = () => {
     const n = parseFloat(nota);

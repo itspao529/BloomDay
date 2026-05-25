@@ -13,7 +13,7 @@ export default function AsistenciaScreen() {
   const cargarAlumnos = async () => {
     try {
       const res = await API.get("/usuarios");
-      const soloAlumnos = res.data.filter(u => u.rol !== "admin" && u.rol !== "maestro");
+      const soloAlumnos = res.data.filter(u => u.rol !== "admin" && u.rol !== "admin");
       setAlumnos(soloAlumnos);
       const inicial = {};
       soloAlumnos.forEach(a => { inicial[a.id] = "presente"; });

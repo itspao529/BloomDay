@@ -28,7 +28,7 @@ export default function HomeScreen({ navigation }) {
     } catch (e) { console.log(e); }
   };
 
-  const esAdmin = usuario?.rol === "admin" || usuario?.rol === "maestro";
+  const esAdmin = usuario?.rol === "admin" || usuario?.rol === "admin";
 
   return (
     <ScrollView style={styles.container}>
