@@ -1,6 +1,4 @@
-import {
-  View, Text, StyleSheet, TouchableOpacity, FlatList, TextInput, Modal, Alert,
-} from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, FlatList, TextInput, Modal, Alert } from "react-native";
 import { useState, useEffect } from "react";
 import API from "../services/api";
 
@@ -15,114 +13,74 @@ export default function TaskScreen() {
   const fechaTexto = `${fecha_hoy.getDate()} de ${meses[fecha_hoy.getMonth()]}`;
 
   useEffect(() => { cargarTareas(); }, []);
-
-  const cargarTareas = async () => {
-    try {
-      const res = await API.get("/tareas");
-      setTareas(res.data);
-    } catch (e) { console.log(e); }
-  };
-
-  const abrirModal = (item = null) => {
-    setEditingTarea(item);
-    setTitulo(item ? item.titulo : "");
-    setModalVisible(true);
-  };
-
+  const cargarTareas = async () => { try { const res = await API.get("/tareas"); setTareas(res.data); } catch (e) { console.log(e); } };
+  const abrirModal = (item = null) => { setEditingTarea(item); setTitulo(item ? item.titulo : ""); setModalVisible(true); };
   const guardar = async () => {
-    if (!titulo.trim()) { Alert.alert("Error", "Escribe un título"); return; }
+    if (!titulo.trim()) { Alert.alert("¡Ups!", "Escribe el nombre de la actividad 📝"); return; }
     try {
-      if (editingTarea) {
-        await API.put(`/tareas/${editingTarea.id}`, { ...editingTarea, titulo });
-      } else {
-        await API.post("/tareas", { titulo, estado: "pendiente", prioridad: "media" });
-      }
-      setModalVisible(false);
-      cargarTareas();
-    } catch (e) { Alert.alert("Error", "No se pudo guardar"); }
+      if (editingTarea) { await API.put(`/tareas/${editingTarea.id}`, { ...editingTarea, titulo }); }
+      else { await API.post("/tareas", { titulo, estado: "pendiente", prioridad: "media" }); }
+      setModalVisible(false); cargarTareas();
+    } catch (e) { Alert.alert("¡Ups!", "No se pudo guardar"); }
   };
-
   const toggleTarea = async (item) => {
-    try {
-      const nuevoEstado = item.estado === "completada" ? "pendiente" : "completada";
-      await API.put(`/tareas/${item.id}`, { ...item, estado: nuevoEstado });
-      cargarTareas();
-    } catch (e) { console.log(e); }
+    try { await API.put(`/tareas/${item.id}`, { ...item, estado: item.estado === "completada" ? "pendiente" : "completada" }); cargarTareas(); }
+    catch (e) { console.log(e); }
   };
-
-  const eliminar = async (id) => {
-    try { await API.delete(`/tareas/${id}`); cargarTareas(); }
-    catch (e) { Alert.alert("Error", "No se pudo eliminar"); }
+  const eliminar = (id) => {
+    Alert.alert("¿Eliminar?", "¿Borrar esta actividad?", [
+      { text: "No", style: "cancel" },
+      { text: "Sí", style: "destructive", onPress: async () => { try { await API.delete(`/tareas/${id}`); cargarTareas(); } catch (e) {} } }
+    ]);
   };
 
   const filtradas = tareas.filter(t => t.estado === filtro);
+  const emojisCard = ["🎨","✏️","📚","🔢","🎵","🌍","🧩","⭐"];
+  const colores = ["#FF6B9D15","#4D96FF15","#6BCB7715","#FFD93D15","#9B59B615"];
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <View>
-          <Text style={styles.titulo}>Tareas</Text>
-          <Text style={styles.fecha}>{fechaTexto}</Text>
-          <Text style={styles.semana}>Semana Actual</Text>
-        </View>
-        <TouchableOpacity onPress={() => abrirModal()}>
-          <Text style={styles.addIcon}>＋</Text>
+        <View style={[styles.circle, styles.c1]} />
+        <Text style={styles.titulo}>📋 Actividades</Text>
+        <Text style={styles.fecha}>{fechaTexto}</Text>
+        <TouchableOpacity style={styles.addBtn} onPress={() => abrirModal()}>
+          <Text style={styles.addBtnText}>＋</Text>
         </TouchableOpacity>
       </View>
-
       <View style={styles.filtros}>
-        <TouchableOpacity
-          style={[styles.filtroBtn, filtro === "pendiente" && styles.filtroActivo]}
-          onPress={() => setFiltro("pendiente")}
-        >
-          <Text style={[styles.filtroText, filtro === "pendiente" && styles.filtroTextActivo]}>Pendientes</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.filtroBtn, filtro === "completada" && styles.filtroActivo]}
-          onPress={() => setFiltro("completada")}
-        >
-          <Text style={[styles.filtroText, filtro === "completada" && styles.filtroTextActivo]}>Entregadas</Text>
-        </TouchableOpacity>
+        {[{ label: "🕐 Pendientes", value: "pendiente" }, { label: "⭐ Entregadas", value: "completada" }].map(f => (
+          <TouchableOpacity key={f.value} style={[styles.filtroBtn, filtro === f.value && styles.filtroActivo]} onPress={() => setFiltro(f.value)}>
+            <Text style={[styles.filtroText, filtro === f.value && styles.filtroTextActivo]}>{f.label}</Text>
+          </TouchableOpacity>
+        ))}
       </View>
-
-      <Text style={styles.seccion}>{filtro === "pendiente" ? "Pendientes" : "Completadas"}</Text>
-
       <FlatList
         data={filtradas}
         keyExtractor={(item) => item.id.toString()}
-        renderItem={({ item }) => (
-          <TouchableOpacity
-            style={styles.tareaCard}
-            onPress={() => toggleTarea(item)}
-            onLongPress={() => abrirModal(item)}
-          >
-            <View style={[styles.dot, { backgroundColor: item.estado === "completada" ? "#7DBE7A" : "#E74C3C" }]} />
-            <Text style={[styles.tareaTitulo, item.estado === "completada" && styles.tachado]}>
-              {item.titulo}
-            </Text>
+        contentContainerStyle={{ padding: 20, paddingTop: 0 }}
+        renderItem={({ item, index }) => (
+          <TouchableOpacity style={[styles.tareaCard, { backgroundColor: colores[index % colores.length] }]} onPress={() => toggleTarea(item)} onLongPress={() => abrirModal(item)}>
+            <View style={[styles.emojiBox, { backgroundColor: item.estado === "completada" ? "#6BCB7730" : "#FF6B9D20" }]}>
+              <Text style={styles.tareaEmoji}>{item.estado === "completada" ? "✅" : emojisCard[index % emojisCard.length]}</Text>
+            </View>
+            <Text style={[styles.tareaTitulo, item.estado === "completada" && styles.tachado]}>{item.titulo}</Text>
+            <TouchableOpacity onPress={() => eliminar(item.id)}><Text style={styles.trashIcon}>🗑️</Text></TouchableOpacity>
           </TouchableOpacity>
         )}
-        ListEmptyComponent={<Text style={styles.vacio}>No hay tareas {filtro === "pendiente" ? "pendientes" : "completadas"}</Text>}
-        contentContainerStyle={{ paddingBottom: 30 }}
+        ListEmptyComponent={<View style={styles.vacioBox}><Text style={styles.vacioEmoji}>{filtro === "pendiente" ? "🎉" : "📭"}</Text><Text style={styles.vacioText}>{filtro === "pendiente" ? "¡No hay actividades pendientes!" : "Aún no hay entregadas"}</Text></View>}
       />
-
       <Modal visible={modalVisible} transparent animationType="slide">
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitulo}>{editingTarea ? "Editar Tarea" : "Nueva Tarea"}</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Título de la tarea"
-              value={titulo}
-              onChangeText={setTitulo}
-              placeholderTextColor="#aaa"
-            />
-            <TouchableOpacity style={styles.btnGuardar} onPress={guardar}>
-              <Text style={styles.btnGuardarText}>Guardar</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.btnCancelar} onPress={() => setModalVisible(false)}>
-              <Text style={styles.btnCancelarText}>Cancelar</Text>
-            </TouchableOpacity>
+            <Text style={styles.modalEmoji}>{editingTarea ? "✏️" : "🆕"}</Text>
+            <Text style={styles.modalTitulo}>{editingTarea ? "Editar Actividad" : "Nueva Actividad"}</Text>
+            <View style={styles.inputBox}>
+              <Text style={styles.inputIcon}>📝</Text>
+              <TextInput style={styles.input} placeholder="Nombre de la actividad..." value={titulo} onChangeText={setTitulo} placeholderTextColor="#BBB" />
+            </View>
+            <TouchableOpacity style={styles.btnGuardar} onPress={guardar}><Text style={styles.btnGuardarText}>💾 Guardar</Text></TouchableOpacity>
+            <TouchableOpacity style={styles.btnCancelar} onPress={() => setModalVisible(false)}><Text style={styles.btnCancelarText}>Cancelar</Text></TouchableOpacity>
           </View>
         </View>
       </Modal>
@@ -131,29 +89,37 @@ export default function TaskScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F6EFD6", padding: 20 },
-  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginTop: 40, marginBottom: 20 },
-  titulo: { fontSize: 26, fontWeight: "bold", color: "#222" },
-  fecha: { fontSize: 14, color: "#555" },
-  semana: { fontSize: 13, color: "#777", marginTop: 2 },
-  addIcon: { fontSize: 30, color: "#222" },
-  filtros: { flexDirection: "row", gap: 10, marginBottom: 20 },
-  filtroBtn: { flex: 1, paddingVertical: 10, borderRadius: 8, backgroundColor: "#D4C9A8", alignItems: "center" },
-  filtroActivo: { backgroundColor: "#6B8F4E" },
-  filtroText: { color: "#444", fontWeight: "bold" },
+  container: { flex: 1, backgroundColor: "#FFFBFF" },
+  header: { backgroundColor: "#FF6B9D", borderBottomLeftRadius: 32, borderBottomRightRadius: 32, padding: 24, paddingTop: 56, paddingBottom: 28, overflow: "hidden" },
+  circle: { position: "absolute", borderRadius: 999 },
+  c1: { width: 150, height: 150, backgroundColor: "#ffffff20", top: -50, right: -30 },
+  titulo: { fontSize: 28, fontWeight: "900", color: "#fff" },
+  fecha: { fontSize: 13, color: "#ffffff99", marginTop: 2 },
+  addBtn: { position: "absolute", top: 52, right: 24, backgroundColor: "#ffffff30", width: 44, height: 44, borderRadius: 14, justifyContent: "center", alignItems: "center" },
+  addBtnText: { color: "#fff", fontSize: 26, fontWeight: "900" },
+  filtros: { flexDirection: "row", gap: 12, padding: 20, paddingBottom: 12 },
+  filtroBtn: { flex: 1, paddingVertical: 10, borderRadius: 14, backgroundColor: "#fff", alignItems: "center", shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 6, elevation: 2 },
+  filtroActivo: { backgroundColor: "#FF6B9D" },
+  filtroText: { color: "#AAA", fontWeight: "700", fontSize: 13 },
   filtroTextActivo: { color: "#fff" },
-  seccion: { fontSize: 16, fontWeight: "bold", color: "#333", marginBottom: 12 },
-  tareaCard: { backgroundColor: "#fff", borderRadius: 12, padding: 18, marginBottom: 12, flexDirection: "row", alignItems: "center", gap: 12, borderWidth: 1, borderColor: "#ddd" },
-  dot: { width: 14, height: 14, borderRadius: 7 },
-  tareaTitulo: { fontSize: 16, color: "#222", flex: 1 },
-  tachado: { textDecorationLine: "line-through", color: "#888" },
-  vacio: { textAlign: "center", color: "#888", marginTop: 30 },
-  modalContainer: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "rgba(0,0,0,0.5)" },
-  modalContent: { width: "90%", backgroundColor: "#F6EFD6", padding: 25, borderRadius: 16 },
-  modalTitulo: { fontSize: 20, fontWeight: "bold", color: "#222", marginBottom: 15 },
-  input: { backgroundColor: "#fff", borderRadius: 8, padding: 12, marginBottom: 10, borderWidth: 1, borderColor: "#ddd", fontSize: 15 },
-  btnGuardar: { backgroundColor: "#7DBE7A", borderRadius: 8, padding: 14, alignItems: "center", marginTop: 5 },
-  btnGuardarText: { color: "#fff", fontWeight: "bold", fontSize: 16 },
-  btnCancelar: { backgroundColor: "#ccc", borderRadius: 8, padding: 14, alignItems: "center", marginTop: 8 },
-  btnCancelarText: { color: "#333", fontWeight: "bold", fontSize: 16 },
+  tareaCard: { borderRadius: 18, padding: 16, marginBottom: 12, flexDirection: "row", alignItems: "center", gap: 12 },
+  emojiBox: { width: 44, height: 44, borderRadius: 14, justifyContent: "center", alignItems: "center" },
+  tareaEmoji: { fontSize: 22 },
+  tareaTitulo: { fontSize: 15, color: "#2D2D2D", flex: 1, fontWeight: "600" },
+  tachado: { textDecorationLine: "line-through", color: "#CCC" },
+  trashIcon: { fontSize: 18 },
+  vacioBox: { alignItems: "center", marginTop: 60 },
+  vacioEmoji: { fontSize: 56, marginBottom: 12 },
+  vacioText: { color: "#AAA", fontSize: 15, fontWeight: "600", textAlign: "center" },
+  modalContainer: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "rgba(0,0,0,0.4)" },
+  modalContent: { width: "90%", backgroundColor: "#FFFBFF", padding: 28, borderRadius: 28, alignItems: "center", shadowColor: "#000", shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.15, shadowRadius: 24, elevation: 10 },
+  modalEmoji: { fontSize: 44, marginBottom: 8 },
+  modalTitulo: { fontSize: 20, fontWeight: "900", color: "#2D2D2D", marginBottom: 20 },
+  inputBox: { flexDirection: "row", alignItems: "center", backgroundColor: "#F8F8F8", borderRadius: 16, paddingHorizontal: 14, paddingVertical: 4, marginBottom: 16, borderWidth: 1.5, borderColor: "#F0F0F0", width: "100%" },
+  inputIcon: { fontSize: 18, marginRight: 10 },
+  input: { flex: 1, fontSize: 15, color: "#2D2D2D", paddingVertical: 12 },
+  btnGuardar: { width: "100%", backgroundColor: "#FF6B9D", borderRadius: 16, padding: 15, alignItems: "center", marginBottom: 10, shadowColor: "#FF6B9D", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 4 },
+  btnGuardarText: { color: "#fff", fontWeight: "900", fontSize: 16 },
+  btnCancelar: { width: "100%", backgroundColor: "#F8F8F8", borderRadius: 16, padding: 15, alignItems: "center" },
+  btnCancelarText: { color: "#AAA", fontWeight: "700", fontSize: 15 },
 });
