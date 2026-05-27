@@ -1,5 +1,6 @@
 import { View, Text, StyleSheet, TouchableOpacity, FlatList, Modal, TextInput, Alert } from "react-native";
 import { useState, useEffect } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { getEvents, createEvent, updateEvent, deleteEvent } from "../services/eventService";
 
 export default function EventScreen() {
@@ -11,27 +12,53 @@ export default function EventScreen() {
   const [descripcion, setDescripcion] = useState("");
   const [lugar, setLugar] = useState("");
   const [fecha, setFecha] = useState("");
+  const [esAdmin, setEsAdmin] = useState(false);
+
   const meses = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
 
-  useEffect(() => { cargarEventos(); }, []);
-  const cargarEventos = async () => { try { const data = await getEvents(); setEventos(data); } catch (e) { console.log(e); } };
+  useEffect(() => {
+    const cargar = async () => {
+      const u = await AsyncStorage.getItem("user");
+      if (u) setEsAdmin(JSON.parse(u).rol === "admin");
+    };
+    cargar();
+    cargarEventos();
+  }, []);
+
+  const cargarEventos = async () => {
+    try { const data = await getEvents(); setEventos(data); }
+    catch (e) { console.log(e); }
+  };
+
   const abrirModal = (item = null) => {
-    if (item) { setEditingEvento(item); setTitulo(item.titulo); setDescripcion(item.descripcion || ""); setLugar(item.lugar || ""); setFecha(item.fecha ? item.fecha.split("T")[0] : ""); }
-    else { setEditingEvento(null); setTitulo(""); setDescripcion(""); setLugar(""); setFecha(""); }
+    if (item) {
+      setEditingEvento(item); setTitulo(item.titulo);
+      setDescripcion(item.descripcion || ""); setLugar(item.lugar || "");
+      setFecha(item.fecha ? item.fecha.split("T")[0] : "");
+    } else {
+      setEditingEvento(null); setTitulo(""); setDescripcion(""); setLugar(""); setFecha("");
+    }
     setModalVisible(true);
   };
+
   const guardar = async () => {
     if (!titulo || !fecha) { Alert.alert("¡Ups!", "Título y fecha son requeridos"); return; }
     try {
-      if (editingEvento) { await updateEvent(editingEvento.id, titulo, descripcion, fecha + "T08:00:00", lugar); }
-      else { await createEvent(titulo, descripcion, fecha + "T08:00:00", lugar); }
+      if (editingEvento) {
+        await updateEvent(editingEvento.id, titulo, descripcion, fecha + "T08:00:00", lugar);
+      } else {
+        await createEvent(titulo, descripcion, fecha + "T08:00:00", lugar);
+      }
       setModalVisible(false); cargarEventos();
     } catch (e) { Alert.alert("Error", "No se pudo guardar"); }
   };
+
   const eliminar = (id) => {
-    Alert.alert("¿Eliminar?", "¿Borrar este evento?", [
+    Alert.alert("¿Eliminar?", "¿Seguro?", [
       { text: "No", style: "cancel" },
-      { text: "Sí", style: "destructive", onPress: async () => { try { await deleteEvent(id); cargarEventos(); } catch (e) {} } }
+      { text: "Sí", style: "destructive", onPress: async () => {
+        try { await deleteEvent(id); cargarEventos(); } catch (e) {}
+      }}
     ]);
   };
 
@@ -41,24 +68,42 @@ export default function EventScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: esAdmin ? "#6BCB77" : "#4D96FF" }]}>
         <View style={[styles.circle, styles.c1]} />
-        <Text style={styles.titulo}>🎉 Eventos del Salón</Text>
-        <TouchableOpacity style={styles.addBtn} onPress={() => abrirModal()}><Text style={styles.addBtnText}>＋</Text></TouchableOpacity>
+        <View style={styles.headerRow}>
+          <View>
+            <Text style={styles.titulo}>🎉 Eventos del Salón</Text>
+            <Text style={styles.subtitulo}>{filtrados.length} eventos</Text>
+          </View>
+          {esAdmin && (
+            <TouchableOpacity style={styles.addBtn} onPress={() => abrirModal()}>
+              <Text style={styles.addBtnText}>＋</Text>
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
+
       <View style={styles.filtros}>
         {[{ label: "🎉 Todos", value: "Todos" }, { label: "👩‍👩‍👧 Reuniones", value: "Reuniones" }, { label: "🎊 Festivos", value: "Festivos" }].map(f => (
-          <TouchableOpacity key={f.value} style={[styles.filtroBtn, filtro === f.value && styles.filtroActivo]} onPress={() => setFiltro(f.value)}>
+          <TouchableOpacity key={f.value}
+            style={[styles.filtroBtn, filtro === f.value && { backgroundColor: esAdmin ? "#6BCB77" : "#4D96FF" }]}
+            onPress={() => setFiltro(f.value)}>
             <Text style={[styles.filtroText, filtro === f.value && styles.filtroTextActivo]}>{f.label}</Text>
           </TouchableOpacity>
         ))}
       </View>
+
       <FlatList
         data={filtrados}
         keyExtractor={(item) => item.id.toString()}
         contentContainerStyle={{ padding: 20, paddingTop: 0 }}
         renderItem={({ item, index }) => (
-          <TouchableOpacity style={styles.eventoCard} onPress={() => abrirModal(item)} onLongPress={() => eliminar(item.id)}>
+          <TouchableOpacity
+            style={styles.eventoCard}
+            onPress={() => esAdmin && abrirModal(item)}
+            onLongPress={() => esAdmin && eliminar(item.id)}
+            activeOpacity={esAdmin ? 0.7 : 1}
+          >
             <View style={[styles.fechaBox, { backgroundColor: colores[index % colores.length] }]}>
               <Text style={styles.fechaNum}>{item.fecha ? new Date(item.fecha).getDate() : "?"}</Text>
               <Text style={styles.fechaMes}>{item.fecha ? meses[new Date(item.fecha).getMonth()]?.substring(0, 3) : ""}</Text>
@@ -66,40 +111,63 @@ export default function EventScreen() {
             <View style={{ flex: 1 }}>
               <Text style={styles.eventoTitulo}>{item.titulo}</Text>
               {item.lugar ? <Text style={styles.eventoLugar}>📍 {item.lugar}</Text> : null}
+              {item.descripcion ? <Text style={styles.eventoDesc} numberOfLines={1}>{item.descripcion}</Text> : null}
             </View>
             <Text style={styles.eventoEmoji}>{emojisEvento[index % emojisEvento.length]}</Text>
           </TouchableOpacity>
         )}
-        ListEmptyComponent={<View style={styles.vacioBox}><Text style={styles.vacioEmoji}>📅</Text><Text style={styles.vacioText}>No hay eventos todavía</Text></View>}
-      />
-      <Modal visible={modalVisible} transparent animationType="slide">
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalEmoji}>{editingEvento ? "✏️" : "🆕"}</Text>
-            <Text style={styles.modalTitulo}>{editingEvento ? "Editar Evento" : "Nuevo Evento"}</Text>
-            {[{ icon: "📌", ph: "Título del evento", val: titulo, set: setTitulo }, { icon: "📝", ph: "Descripción (opcional)", val: descripcion, set: setDescripcion }, { icon: "📍", ph: "Lugar (opcional)", val: lugar, set: setLugar }, { icon: "📅", ph: "Fecha: YYYY-MM-DD", val: fecha, set: setFecha }].map((f, i) => (
-              <View key={i} style={styles.inputBox}><Text style={styles.inputIcon}>{f.icon}</Text><TextInput style={styles.input} placeholder={f.ph} value={f.val} onChangeText={f.set} placeholderTextColor="#BBB" /></View>
-            ))}
-            <TouchableOpacity style={styles.btnGuardar} onPress={guardar}><Text style={styles.btnGuardarText}>💾 Guardar Evento</Text></TouchableOpacity>
-            <TouchableOpacity style={styles.btnCancelar} onPress={() => setModalVisible(false)}><Text style={styles.btnCancelarText}>Cancelar</Text></TouchableOpacity>
+        ListEmptyComponent={
+          <View style={styles.vacioBox}>
+            <Text style={styles.vacioEmoji}>📅</Text>
+            <Text style={styles.vacioText}>No hay eventos todavía</Text>
           </View>
-        </View>
-      </Modal>
+        }
+      />
+
+      {/* Modal solo para maestra */}
+      {esAdmin && (
+        <Modal visible={modalVisible} transparent animationType="slide">
+          <View style={styles.modalContainer}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalEmoji}>{editingEvento ? "✏️" : "🆕"}</Text>
+              <Text style={styles.modalTitulo}>{editingEvento ? "Editar Evento" : "Nuevo Evento"}</Text>
+              {[
+                { icon: "📌", placeholder: "Título del evento", value: titulo, onChange: setTitulo },
+                { icon: "📝", placeholder: "Descripción (opcional)", value: descripcion, onChange: setDescripcion },
+                { icon: "📍", placeholder: "Lugar (opcional)", value: lugar, onChange: setLugar },
+                { icon: "📅", placeholder: "Fecha: YYYY-MM-DD", value: fecha, onChange: setFecha },
+              ].map((field, i) => (
+                <View key={i} style={styles.inputBox}>
+                  <Text style={styles.inputIcon}>{field.icon}</Text>
+                  <TextInput style={styles.input} placeholder={field.placeholder} value={field.value} onChangeText={field.onChange} placeholderTextColor="#BBB" />
+                </View>
+              ))}
+              <TouchableOpacity style={styles.btnGuardar} onPress={guardar}>
+                <Text style={styles.btnGuardarText}>💾 Guardar Evento</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.btnCancelar} onPress={() => setModalVisible(false)}>
+                <Text style={styles.btnCancelarText}>Cancelar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#FFFBFF" },
-  header: { backgroundColor: "#6BCB77", borderBottomLeftRadius: 32, borderBottomRightRadius: 32, padding: 24, paddingTop: 56, paddingBottom: 28, overflow: "hidden" },
+  header: { borderBottomLeftRadius: 32, borderBottomRightRadius: 32, padding: 24, paddingTop: 56, paddingBottom: 28, overflow: "hidden" },
   circle: { position: "absolute", borderRadius: 999 },
   c1: { width: 150, height: 150, backgroundColor: "#ffffff20", top: -50, right: -30 },
-  titulo: { fontSize: 26, fontWeight: "900", color: "#fff" },
-  addBtn: { position: "absolute", top: 52, right: 24, backgroundColor: "#ffffff30", width: 44, height: 44, borderRadius: 14, justifyContent: "center", alignItems: "center" },
+  headerRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  titulo: { fontSize: 24, fontWeight: "900", color: "#fff" },
+  subtitulo: { fontSize: 13, color: "#ffffff99", marginTop: 2 },
+  addBtn: { backgroundColor: "#ffffff30", width: 44, height: 44, borderRadius: 14, justifyContent: "center", alignItems: "center" },
   addBtnText: { color: "#fff", fontSize: 26, fontWeight: "900" },
-  filtros: { flexDirection: "row", gap: 10, padding: 20, paddingBottom: 12 },
+  filtros: { flexDirection: "row", gap: 8, padding: 16, paddingBottom: 8 },
   filtroBtn: { flex: 1, paddingVertical: 9, borderRadius: 14, backgroundColor: "#fff", alignItems: "center", shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 6, elevation: 2 },
-  filtroActivo: { backgroundColor: "#6BCB77" },
   filtroText: { color: "#AAA", fontWeight: "700", fontSize: 11 },
   filtroTextActivo: { color: "#fff" },
   eventoCard: { backgroundColor: "#fff", borderRadius: 18, padding: 16, marginBottom: 12, flexDirection: "row", alignItems: "center", gap: 14, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 },
@@ -108,6 +176,7 @@ const styles = StyleSheet.create({
   fechaMes: { color: "#ffffff99", fontSize: 11, fontWeight: "700" },
   eventoTitulo: { fontSize: 15, fontWeight: "800", color: "#2D2D2D" },
   eventoLugar: { fontSize: 12, color: "#AAA", marginTop: 3 },
+  eventoDesc: { fontSize: 11, color: "#BBB", marginTop: 2 },
   eventoEmoji: { fontSize: 24 },
   vacioBox: { alignItems: "center", marginTop: 60 },
   vacioEmoji: { fontSize: 56, marginBottom: 12 },

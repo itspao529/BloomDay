@@ -12,7 +12,8 @@ app.use('/api/auth',           require('./routes/auth'));
 app.use('/api/eventos',        require('./routes/eventos'));
 app.use('/api/tareas',         require('./routes/tareas'));
 app.use('/api/notificaciones', require('./routes/notificaciones'));
-app.use('/api/usuarios',       require('./routes/usuarios'));
+app.use('/api/usuarios', require('./routes/usuarios'));
+app.use('/api/estudiantes', require('./routes/estudiantes'));
 
 app.get('/', (req, res) => {
   res.json({ mensaje: 'API funcionando correctamente.' });

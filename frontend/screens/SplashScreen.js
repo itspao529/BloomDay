@@ -7,8 +7,12 @@ export default function SplashScreen({ navigation }) {
     const check = async () => {
       try {
         const token = await AsyncStorage.getItem("token");
-        setTimeout(() => { navigation.replace(token ? "Home" : "Login"); }, 2000);
-      } catch (e) { navigation.replace("Login"); }
+        setTimeout(() => {
+          navigation.replace(token ? "Home" : "Login");
+        }, 2000);
+      } catch (e) {
+        navigation.replace("Login");
+      }
     };
     check();
   }, []);
@@ -18,9 +22,7 @@ export default function SplashScreen({ navigation }) {
       <View style={[styles.circle, styles.c1]} />
       <View style={[styles.circle, styles.c2]} />
       <View style={[styles.circle, styles.c3]} />
-      <View style={styles.logoCircle}>
-        <Text style={styles.logoEmoji}>🌸</Text>
-      </View>
+      <View style={styles.logoCircle}><Text style={styles.logoEmoji}>🌸</Text></View>
       <Text style={styles.logo}>BloomDay</Text>
       <Text style={styles.sub}>Jardín de Niños</Text>
       <View style={styles.dotsRow}>
